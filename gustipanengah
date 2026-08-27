@@ -1,0 +1,11 @@
+src/
+├── utils/
+│   └── formatters.js
+├── components/
+│   ├── Header.jsx
+│   ├── MetricCards.jsx
+│   └── AIAdvisor.jsx
+├── App.jsx
+├── main.jsx
+├── style.css
+└── App.css
