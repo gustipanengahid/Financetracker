@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  CheckCircle2,
-  AlertTriangle,
   Trash2,
   Edit2,
   X,
   Inbox,
   TrendingUp,
-  ShieldCheck,
-  ShieldAlert,
-  ShieldX,
+  Eye,
+  EyeOff,
+  RotateCcw,
+  Plus,
+  Download,
+  Upload,
 } from "lucide-react";
 import {
   AreaChart,
@@ -21,11 +22,9 @@ import {
   CartesianGrid,
 } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
-import { createWorker } from "tesseract.js";
 
 // Import Komponen & Utilitas
 import { formatRupiah, formatDateDisplay } from "./utils/formatters";
-import Header from "./components/Header";
 import MetricCards from "./components/MetricCards";
 import "./style.css";
 
@@ -51,8 +50,8 @@ export default function App() {
     () => new Date().toISOString().split("T")[0],
   );
   const [inputTarget, setInputTarget] = useState("");
-  const [isScanning, setIsScanning] = useState(false);
 
+  // Referensi untuk tombol upload file JSON tersembunyi
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -69,211 +68,6 @@ export default function App() {
     }
   };
 
-  const handleScanReceipt = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  // Fungsi Scan Diperluas untuk mendeteksi berbagai variasi kata total / jumlah
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setIsScanning(true);
-    try {
-      const worker = await createWorker("ind");
-      const ret = await worker.recognize(file);
-      const text = ret.data.text;
-      await worker.terminate();
-
-      const lines = text
-        .split("\n")
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
-      const fullTextLower = text.toLowerCase();
-
-      // 1. Ekstraksi Nominal dengan Prioritas Kata Kunci Belanja
-      let detectedAmount = "";
-
-      for (let i = 0; i < lines.length; i++) {
-        const lineLower = lines[i].toLowerCase();
-
-        // Deteksi kata kunci: "total", "jumlah", "grand", "subtotal", dll.
-        const isTargetKeyword =
-          (lineLower.includes("total") ||
-            lineLower.includes("jumlah") ||
-            lineLower.includes("grand")) &&
-          !lineLower.includes("kembali") &&
-          !lineLower.includes("tunai");
-
-        if (isTargetKeyword) {
-          let targetText = lines[i];
-          if (!/\d/.test(targetText) && i + 1 < lines.length) {
-            targetText += " " + lines[i + 1];
-          }
-
-          const numbers = targetText.match(/\d{1,3}(?:\.\d{3})+|\d+/g);
-          if (numbers) {
-            const cleanedNum = numbers.join("").replace(/\D/g, "");
-            const numVal = parseInt(cleanedNum, 10);
-            if (numVal >= 1000 && numVal <= 100000000) {
-              detectedAmount = cleanedNum;
-              break;
-            }
-          }
-        }
-      }
-
-      // Fallback: Cari angka sebelum kata "bayar" atau "tunai" jika kata kunci utama tidak ditemukan
-      if (!detectedAmount) {
-        for (let i = 0; i < lines.length; i++) {
-          const lineLower = lines[i].toLowerCase();
-          if (
-            (lineLower.includes("bayar") || lineLower.includes("tunai")) &&
-            !lineLower.includes("kembali")
-          ) {
-            if (i > 0) {
-              const prevNumbers = lines[i - 1].match(
-                /\d{1,3}(?:\.\d{3})+|\d+/g,
-              );
-              if (prevNumbers) {
-                detectedAmount = prevNumbers.join("").replace(/\D/g, "");
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      if (detectedAmount) {
-        detectedAmount = new Intl.NumberFormat("id-ID").format(
-          parseInt(detectedAmount, 10),
-        );
-      }
-
-      // 2. Ekstraksi Tanggal Multi-Format
-      let detectedDate = new Date().toISOString().split("T")[0];
-
-      const isoDateMatch = text.match(/\b(20\d{2})[-/](\d{2})[-/](\d{2})\b/);
-      const dmyNumericMatch = text.match(/\b(\d{2})[-/](\d{2})[-/](20\d{2})\b/);
-      const monthsMap = {
-        januari: "01",
-        jan: "01",
-        februari: "02",
-        feb: "02",
-        maret: "03",
-        mar: "03",
-        april: "04",
-        apr: "04",
-        mei: "05",
-        may: "05",
-        juni: "06",
-        jun: "06",
-        juli: "07",
-        jul: "07",
-        agustus: "08",
-        agt: "08",
-        aug: "08",
-        september: "09",
-        sep: "09",
-        oktober: "10",
-        okt: "10",
-        oct: "10",
-        november: "11",
-        nov: "11",
-        desember: "12",
-        des: "12",
-        dec: "12",
-      };
-
-      const textDateRegex = new RegExp(
-        `\\b(\\d{1,2})\\s+(${Object.keys(monthsMap).join("|")})\\s+(20\\d{2})\\b`,
-        "i",
-      );
-      const textDateMatch = text.match(textDateRegex);
-
-      if (isoDateMatch) {
-        detectedDate = `${isoDateMatch[1]}-${isoDateMatch[2]}-${isoDateMatch[3]}`;
-      } else if (dmyNumericMatch) {
-        detectedDate = `${dmyNumericMatch[3]}-${dmyNumericMatch[2]}-${dmyNumericMatch[1]}`;
-      } else if (textDateMatch) {
-        const day = textDateMatch[1].padStart(2, "0");
-        const monthKey = textDateMatch[2].toLowerCase();
-        const month = monthsMap[monthKey] || "01";
-        const year = textDateMatch[3];
-        detectedDate = `${year}-${month}-${day}`;
-      }
-
-      // 3. Kamus Pintar Nama Merchant
-      let storeName = "Belanja Struk";
-
-      if (/toko\s*selada/i.test(fullTextLower)) {
-        storeName = "Toko Selada";
-      } else if (
-        /pertamin|spbu|pertalite|pertamax|solar|dexlite/i.test(fullTextLower)
-      ) {
-        storeName = "SPBU Pertamina";
-      } else if (/indomaret/i.test(fullTextLower)) {
-        storeName = "Indomaret";
-      } else if (/alfamart|alfamidi/i.test(fullTextLower)) {
-        storeName = "Alfamart";
-      } else if (/mcdonald|mcd/i.test(fullTextLower)) {
-        storeName = "McDonald's";
-      } else if (/kfc|kentucky/i.test(fullTextLower)) {
-        storeName = "KFC";
-      } else if (/starbucks|sbux/i.test(fullTextLower)) {
-        storeName = "Starbucks";
-      } else {
-        for (let line of lines) {
-          if (
-            /toko|cafe|mart|warung|rumah\s*makan|rm[\s.]|pt[\s.]|cv[\s.]/i.test(
-              line,
-            )
-          ) {
-            let cleanedLine = line.replace(/[^a-zA-Z0-9\s.-]/g, "").trim();
-            if (
-              cleanedLine.length >= 3 &&
-              !/terima kasih|selamat datang|layanan/i.test(cleanedLine)
-            ) {
-              storeName = cleanedLine;
-              break;
-            }
-          }
-        }
-
-        if (storeName === "Belanja Struk" && lines.length > 0) {
-          for (let i = 0; i < Math.min(lines.length, 3); i++) {
-            let candidate = lines[i].replace(/[^a-zA-Z0-9\s.-]/g, "").trim();
-            if (
-              candidate.length >= 3 &&
-              !/\b(jl|jalan|no\.|rt|rw|telp|hp|waktu|tanggal|kasir|pondok)\b/i.test(
-                candidate,
-              ) &&
-              !/^\d+$/.test(candidate)
-            ) {
-              storeName = candidate;
-              break;
-            }
-          }
-        }
-      }
-
-      setInputName(storeName);
-      setInputType("expense");
-      if (detectedAmount) setInputAmount(detectedAmount);
-      setInputDate(detectedDate);
-
-      setIsTransactionModalOpen(true);
-    } catch (error) {
-      console.error("Gagal memindai struk:", error);
-      alert("Gagal membaca gambar struk. Silakan isi secara manual.");
-    } finally {
-      setIsScanning(false);
-      e.target.value = null;
-    }
-  };
-
   const income = transactions
     .filter((t) => t.type === "income")
     .reduce((acc, t) => acc + t.amount, 0);
@@ -281,43 +75,6 @@ export default function App() {
     .filter((t) => t.type === "expense")
     .reduce((acc, t) => acc + t.amount, 0);
   const balance = income - expense;
-
-  const getFinancialHealth = () => {
-    if (income === 0 && expense === 0) {
-      return {
-        score: 100,
-        label: "Belum Ada Data",
-        color: "#94a3b8",
-        icon: ShieldCheck,
-      };
-    }
-    const expenseRatio = income > 0 ? (expense / income) * 100 : 100;
-    if (expenseRatio <= 50 && balance >= 0) {
-      return {
-        score: 90,
-        label: "Sangat Sehat",
-        color: "#10b981",
-        icon: ShieldCheck,
-      };
-    } else if (expenseRatio <= 80 && balance >= 0) {
-      return {
-        score: 70,
-        label: "Perlu Perhatian",
-        color: "#f59e0b",
-        icon: ShieldAlert,
-      };
-    } else {
-      return {
-        score: 40,
-        label: "Bahaya / Defisit",
-        color: "#f43f5e",
-        icon: ShieldX,
-      };
-    }
-  };
-
-  const financialHealth = getFinancialHealth();
-  const HealthIcon = financialHealth.icon;
 
   const filteredTransactions = transactions.filter((t) => {
     if (currentFilter === "income") return t.type === "income";
@@ -390,6 +147,70 @@ export default function App() {
     }
   };
 
+  // Fitu Backup (Ekspor JSON)
+  const handleExportData = () => {
+    try {
+      const backupData = {
+        transactions,
+        savingTarget,
+        version: "1.0",
+        exportDate: new Date().toISOString(),
+      };
+      const dataString = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([dataString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const dateStr = new Date().toISOString().split("T")[0];
+      link.download = `finance-tracker-backup-${dateStr}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Gagal mengekspor data:", error);
+      alert("Terjadi kesalahan saat mencadangkan data.");
+    }
+  };
+
+  // Fitur Restore (Impor JSON)
+  const handleImportData = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsedData = JSON.parse(event.target.result);
+
+        // Validasi struktur data sederhana
+        if (!parsedData || typeof parsedData !== "object") {
+          throw new Error("Format file tidak valid");
+        }
+
+        if (
+          window.confirm(
+            "Memulihkan data akan menimpa data yang ada saat ini. Lanjutkan?",
+          )
+        ) {
+          if (Array.isArray(parsedData.transactions)) {
+            setTransactions(parsedData.transactions);
+          }
+          if (parsedData.savingTarget && !isNaN(parsedData.savingTarget)) {
+            setSavingTarget(parseFloat(parsedData.savingTarget));
+          }
+          alert("Data berhasil dipulihkan!");
+        }
+      } catch (error) {
+        console.error("Gagal membaca file:", error);
+        alert("File cadangan tidak valid atau rusak.");
+      }
+      // Reset input file agar bisa pilih file yang sama jika diperlukan
+      e.target.value = "";
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <motion.div
       className="app"
@@ -397,47 +218,160 @@ export default function App() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept="image/*"
-        capture="environment"
-        style={{ display: "none" }}
-      />
-
-      {isScanning && (
+      <main className="main">
+        {/* Header Floating Minimalis & Modern */}
         <div
           style={{
             position: "fixed",
             top: 0,
             left: 0,
-            width: "100%",
-            height: "100%",
-            background: "rgba(0,0,0,0.7)",
-            zIndex: 9999,
+            right: 0,
+            zIndex: 1000,
             display: "flex",
-            flexDirection: "column",
+            justifyContent: "space-between",
             alignItems: "center",
-            justifyContent: "center",
-            color: "#fff",
-            gap: "12px",
+            padding: "0.5rem 1.25rem",
+            backgroundColor: "rgba(15, 23, 42, 0.75)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
           }}
         >
-          <div style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
-            Menganalisis Struk...
+          <div>
+            <h1
+              style={{
+                fontSize: "1rem",
+                fontWeight: "700",
+                margin: 0,
+                letterSpacing: "-0.02em",
+                color: "#f8fafc",
+              }}
+            >
+              MANAGEMENT
+            </h1>
+            <p
+              style={{
+                color: "#64748b",
+                fontSize: "0.65rem",
+                margin: 0,
+                fontWeight: "500",
+              }}
+            >
+              Financial Dashboard
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            {/* Tombol Sembunyikan Saldo */}
+            <button
+              onClick={() => setIsBalanceHidden(!isBalanceHidden)}
+              className="more-btn"
+              title="Sembunyikan/Tampilkan Saldo"
+              style={{
+                padding: "5px 8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "6px",
+                background: "rgba(30, 41, 59, 0.5)",
+                border: "1px solid rgba(255, 255, 255, 0.05)",
+                color: "#94a3b8",
+                cursor: "pointer",
+              }}
+            >
+              {isBalanceHidden ? <EyeOff size={13} /> : <Eye size={13} />}
+            </button>
+
+            {/* Tombol Backup (Ekspor JSON) */}
+            <button
+              onClick={handleExportData}
+              className="more-btn"
+              title="Backup Data"
+              style={{
+                padding: "5px 8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "6px",
+                background: "rgba(30, 41, 59, 0.5)",
+                border: "1px solid rgba(255, 255, 255, 0.05)",
+                color: "#94a3b8",
+                cursor: "pointer",
+              }}
+            >
+              <Upload size={13} />
+            </button>
+
+            {/* Tombol Restore (Impor JSON) */}
+            <button
+              onClick={() => fileInputRef.current.click()}
+              className="more-btn"
+              title="Restore Data"
+              style={{
+                padding: "5px 8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "6px",
+                background: "rgba(30, 41, 59, 0.5)",
+                border: "1px solid rgba(255, 255, 255, 0.05)",
+                color: "#94a3b8",
+                cursor: "pointer",
+              }}
+            >
+              <Download size={13} />
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImportData}
+              accept=".json"
+              style={{ display: "none" }}
+            />
+
+            {/* Tombol Reset Data */}
+            <button
+              onClick={handleResetData}
+              className="more-btn"
+              title="Reset Data"
+              style={{
+                padding: "5px 8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "6px",
+                background: "rgba(30, 41, 59, 0.5)",
+                border: "1px solid rgba(255, 255, 255, 0.05)",
+                color: "#94a3b8",
+                cursor: "pointer",
+              }}
+            >
+              <RotateCcw size={13} />
+            </button>
+
+            {/* Tombol Tambah Transaksi */}
+            <button
+              onClick={() => setIsTransactionModalOpen(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "5px 10px",
+                background: "#38bdf8",
+                color: "#0f172a",
+                border: "none",
+                borderRadius: "6px",
+                fontWeight: "600",
+                fontSize: "0.75rem",
+                cursor: "pointer",
+              }}
+            >
+              <Plus size={13} /> Tambah
+            </button>
           </div>
         </div>
-      )}
 
-      <main className="main">
-        <Header
-          isBalanceHidden={isBalanceHidden}
-          setIsBalanceHidden={setIsBalanceHidden}
-          handleResetData={handleResetData}
-          setIsTransactionModalOpen={setIsTransactionModalOpen}
-          handleScanReceipt={handleScanReceipt}
-        />
+        {/* Spacer */}
+        <div style={{ height: "10px" }}></div>
 
         <MetricCards
           balance={balance}
@@ -445,135 +379,6 @@ export default function App() {
           expense={expense}
           formatRupiah={(val) => formatRupiah(val, isBalanceHidden)}
         />
-
-        <div className="status-health-grid">
-          <div
-            className="status-banner"
-            style={{
-              padding: "12px 16px",
-              borderRadius: "8px",
-              backgroundColor:
-                balance < 1000000
-                  ? "rgba(239, 68, 68, 0.15)"
-                  : "rgba(16, 185, 129, 0.15)",
-              border:
-                balance < 1000000 ? "1px solid #ef4444" : "1px solid #10b981",
-              color: balance < 1000000 ? "#fca5a5" : "#6ee7b7",
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              fontSize: "0.9rem",
-            }}
-          >
-            {balance < 1000000 ? (
-              <AlertTriangle size={18} />
-            ) : (
-              <CheckCircle2 size={18} />
-            )}
-            <span
-              dangerouslySetInnerHTML={{
-                __html:
-                  balance < 1000000
-                    ? "<strong>Peringatan:</strong> Saldo di bawah Rp 1.000.000!"
-                    : "<strong>Status:</strong> Keuangan aman.",
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              padding: "10px 16px",
-              borderRadius: "8px",
-              backgroundColor: "rgba(30, 41, 59, 0.7)",
-              border: `1px solid ${financialHealth.color}`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <div>
-              <span className="label" style={{ fontSize: "0.7rem" }}>
-                KESEHATAN DOMPET
-              </span>
-              <div
-                style={{
-                  fontWeight: 700,
-                  color: financialHealth.color,
-                  fontSize: "0.95rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}
-              >
-                <HealthIcon size={16} /> {financialHealth.label}
-              </div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <span
-                style={{ fontSize: "1.2rem", fontWeight: "800", color: "#fff" }}
-              >
-                {financialHealth.score}
-              </span>
-              <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>/100</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="card" style={{ marginTop: "1rem" }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "0.5rem",
-            }}
-          >
-            <span className="label" style={{ margin: 0 }}>
-              TARGET TABUNGAN
-            </span>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="more-btn"
-              onClick={() => {
-                setInputTarget(
-                  savingTarget
-                    ? new Intl.NumberFormat("id-ID").format(savingTarget)
-                    : "",
-                );
-                setIsTargetModalOpen(true);
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "6px",
-              }}
-            >
-              <Edit2 size={16} />
-            </motion.button>
-          </div>
-          <div
-            className="saving-amount"
-            style={{
-              fontSize: "1.5rem",
-              fontWeight: "700",
-              marginBottom: "1rem",
-            }}
-          >
-            {formatRupiah(savingTarget)}
-          </div>
-          <div className="progress-bar" style={{ marginBottom: "0.5rem" }}>
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${percentage.toFixed(1)}%` }}
-              className="progress"
-            ></motion.div>
-          </div>
-          <p className="saving-info" style={{ margin: 0 }}>
-            Terkumpul {percentage.toFixed(1)}% dari target
-          </p>
-        </div>
 
         <div
           className="card"
@@ -679,6 +484,62 @@ export default function App() {
           </div>
         </div>
 
+        <div className="card" style={{ marginTop: "1rem" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "0.5rem",
+            }}
+          >
+            <span className="label" style={{ margin: 0 }}>
+              TARGET TABUNGAN
+            </span>
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="more-btn"
+              onClick={() => {
+                setInputTarget(
+                  savingTarget
+                    ? new Intl.NumberFormat("id-ID").format(savingTarget)
+                    : "",
+                );
+                setIsTargetModalOpen(true);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "6px",
+              }}
+            >
+              <Edit2 size={16} />
+            </motion.button>
+          </div>
+          <div
+            className="saving-amount"
+            style={{
+              fontSize: "1.5rem",
+              fontWeight: "700",
+              marginBottom: "1rem",
+            }}
+          >
+            {formatRupiah(savingTarget, isBalanceHidden)}
+          </div>
+          <div className="progress-bar" style={{ marginBottom: "0.5rem" }}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${percentage.toFixed(1)}%` }}
+              className="progress"
+            ></motion.div>
+          </div>
+          <p className="saving-info" style={{ margin: 0 }}>
+            Terkumpul {percentage.toFixed(1)}% dari target
+          </p>
+        </div>
+
         <div
           className="dashboard"
           style={{
@@ -776,6 +637,7 @@ export default function App() {
         </div>
       </main>
 
+      {/* Modal Tambah Transaksi */}
       <AnimatePresence>
         {isTransactionModalOpen && (
           <div className="modal-overlay active">
@@ -788,7 +650,6 @@ export default function App() {
               <div className="modal-header">
                 <div>
                   <h3>Tambah Transaksi</h3>
-                  <p className="saving-info">Hasil scan otomatis dari struk</p>
                 </div>
                 <button
                   className="close-btn"
@@ -848,6 +709,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Modal Ubah Target Tabungan */}
       <AnimatePresence>
         {isTargetModalOpen && (
           <div className="modal-overlay active">
