@@ -9,7 +9,7 @@ import {
   EyeOff,
   RotateCcw,
   Plus,
-  DownloadCloud, // Menggunakan icon Database untuk menu backup/restore terpadu
+  DownloadCloud,
 } from "lucide-react";
 import {
   AreaChart,
@@ -41,7 +41,7 @@ export default function App() {
 
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
-  const [isBackupMenuOpen, setIsBackupMenuOpen] = useState(false); // State untuk dropdown menu backup
+  const [isBackupMenuOpen, setIsBackupMenuOpen] = useState(false);
 
   const [inputName, setInputName] = useState("");
   const [inputAmount, setInputAmount] = useState("");
@@ -51,11 +51,9 @@ export default function App() {
   );
   const [inputTarget, setInputTarget] = useState("");
 
-  // Referensi untuk tombol upload file JSON tersembunyi
   const fileInputRef = useRef(null);
   const backupMenuRef = useRef(null);
 
-  // Efek untuk menutup dropdown jika klik di luar area menu
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -162,7 +160,6 @@ export default function App() {
     }
   };
 
-  // Fitur Backup (Ekspor JSON)
   const handleExportData = () => {
     try {
       const backupData = {
@@ -189,7 +186,6 @@ export default function App() {
     }
   };
 
-  // Fitur Restore (Impor JSON)
   const handleImportData = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -199,7 +195,6 @@ export default function App() {
       try {
         const parsedData = JSON.parse(event.target.result);
 
-        // Validasi struktur data sederhana
         if (!parsedData || typeof parsedData !== "object") {
           throw new Error("Format file tidak valid");
         }
@@ -221,7 +216,6 @@ export default function App() {
         console.error("Gagal membaca file:", error);
         alert("File cadangan tidak valid atau rusak.");
       }
-      // Reset input file agar bisa pilih file yang sama jika diperlukan
       e.target.value = "";
       setIsBackupMenuOpen(false);
     };
@@ -264,7 +258,7 @@ export default function App() {
                 color: "#f8fafc",
               }}
             >
-              MANAGEMENT
+              MANAGEMENT PRO
             </h1>
             <p
               style={{
@@ -357,7 +351,7 @@ export default function App() {
                       backgroundColor: "#1e293b",
                       border: "1px solid rgba(255, 255, 255, 0.1)",
                       borderRadius: "8px",
-                      boxShadow: "0 10px 25px -5px rgba(0, 0.05, 0.05, 0.5)",
+                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
                       zIndex: 1100,
                       overflow: "hidden",
                     }}
@@ -371,7 +365,7 @@ export default function App() {
                         background: "transparent",
                         border: "none",
                         color: "#e2e8f0",
-                        fontSize: "0.75krem",
+                        fontSize: "0.75rem",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
@@ -425,31 +419,11 @@ export default function App() {
               accept=".json"
               style={{ display: "none" }}
             />
-
-            {/* Tombol Tambah Transaksi */}
-            <button
-              onClick={() => setIsTransactionModalOpen(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                padding: "5px 10px",
-                background: "#38bdf8",
-                color: "#0f172a",
-                border: "none",
-                borderRadius: "6px",
-                fontWeight: "600",
-                fontSize: "0.75rem",
-                cursor: "pointer",
-              }}
-            >
-              <Plus size={13} /> Tambah
-            </button>
           </div>
         </div>
 
         {/* Spacer */}
-        <div style={{ height: "10px" }}></div>
+        <div style={{ height: "20px" }}></div>
 
         <MetricCards
           balance={balance}
@@ -625,6 +599,7 @@ export default function App() {
             gridTemplateColumns: "1fr",
             gap: "1.5rem",
             marginTop: "1.5rem",
+            marginBottom: "3rem",
           }}
         >
           <div className="left-column" style={{ width: "100%" }}>
@@ -714,6 +689,32 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      {/* Tombol Floating Super Simpel (Hanya Ikon Melingkar 44px) */}
+      <motion.button
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.92 }}
+        onClick={() => setIsTransactionModalOpen(true)}
+        title="Tambah Transaksi"
+        style={{
+          position: "fixed",
+          bottom: "1.5rem",
+          right: "1.5rem",
+          zIndex: 999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "50px",
+          height: "50px",
+          backgroundColor: "#38bff8e8",
+          color: "#0f172a",
+          border: "none",
+          borderRadius: "50%",
+          cursor: "pointer",
+        }}
+      >
+        <Plus size={20} strokeWidth={2.5} />
+      </motion.button>
 
       {/* Modal Tambah Transaksi */}
       <AnimatePresence>
