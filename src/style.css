@@ -701,6 +701,7 @@ select:focus {
   transform: translateY(12px) scale(0.96);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  box-sizing: border-box;
 }
 
 .modal-overlay.active .modal {
@@ -751,12 +752,17 @@ select:focus {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  width: 100%;
+  min-width: 0;
 }
 
 .modal .form-group {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .modal label {
@@ -767,7 +773,7 @@ select:focus {
   letter-spacing: 0.05em;
 }
 
-/* Input, Select, dan Date dengan gaya modern */
+/* Input, Select, dan Date dengan gaya modern & proteksi overflow mobile */
 .modal input,
 .modal select {
   background: var(--bg-input);
@@ -780,6 +786,18 @@ select:focus {
   font-family: "Plus Jakarta Sans", sans-serif;
   transition: var(--transition);
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Perbaikan spesifik agar input tanggal tidak melewati garis di mobile */
+.modal input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .modal input:focus,
@@ -799,6 +817,8 @@ select:focus {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
 }
 
 /* Tombol Submit Modal */
@@ -816,6 +836,7 @@ select:focus {
   cursor: pointer;
   transition: var(--transition);
   box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
+  box-sizing: border-box;
 }
 
 .modal button[type="submit"]:hover,
