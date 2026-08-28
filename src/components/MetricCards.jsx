@@ -68,11 +68,11 @@ export default function MetricCards({
         marginTop: "1.5rem",
       }}
     >
-      {/* 1. BAGIAN PALING ATAS: Banner Peringatan & Status (Full Width & Responsive) */}
+      {/* 1. BAGIAN PERTAMA: Kartu Peringatan (Berdiri Sendiri / Full Width) */}
       <motion.div
         variants={itemVariants}
         style={{
-          padding: "10px 14px",
+          padding: "12px 16px",
           borderRadius: "12px",
           backgroundColor: "rgba(15, 23, 42, 0.25)",
           border: `1px solid ${
@@ -81,61 +81,73 @@ export default function MetricCards({
               : "rgba(16, 185, 129, 0.2)"
           }`,
           display: "flex",
-          flexWrap: "wrap", // Membuat elemen turun ke bawah otomatis jika layar sempit (HP)
           alignItems: "center",
-          justifyContent: "space-between",
           gap: "8px",
           fontSize: "0.825rem",
           color: "#cbd5e1",
+          width: "100%",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              color: balance < 1000000 ? "#f87171" : "#34d399",
-              flexShrink: 0,
-            }}
-          >
-            {balance < 1000000 ? (
-              <AlertTriangle size={16} />
-            ) : (
-              <CheckCircle2 size={16} />
-            )}
-          </span>
-          <span
-            dangerouslySetInnerHTML={{
-              __html:
-                balance < 1000000
-                  ? "Peringatan: Saldo di bawah <span style='color:#f87171; font-weight:600;'>Rp 1.000.000</span>"
-                  : "Status Keuangan: <span style='color:#34d399; font-weight:600;'>Aman</span>",
-            }}
-          />
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span
-            style={{
-              color: financialHealth.color,
-              display: "flex",
-              alignItems: "center",
-              flexShrink: 0,
-            }}
-          >
-            <HealthIcon size={14} />
-          </span>
-          <span style={{ color: "#94a3b8", fontSize: "0.775rem" }}>
-            Kesehatan:{" "}
-            <strong style={{ color: financialHealth.color }}>
-              {financialHealth.label}
-            </strong>{" "}
-            ({financialHealth.score}/100)
-          </span>
-        </div>
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+            color: balance < 1000000 ? "#f87171" : "#34d399",
+            flexShrink: 0,
+          }}
+        >
+          {balance < 1000000 ? (
+            <AlertTriangle size={16} />
+          ) : (
+            <CheckCircle2 size={16} />
+          )}
+        </span>
+        <span
+          dangerouslySetInnerHTML={{
+            __html:
+              balance < 1000000
+                ? "Peringatan: Saldo di bawah <span style='color:#f87171; font-weight:600;'>Rp 1.000.000</span>"
+                : "Status Keuangan: <span style='color:#34d399; font-weight:600;'>Aman</span>",
+          }}
+        />
       </motion.div>
 
-      {/* 2. BAGIAN KEDUA: Kartu Total Saldo (Full Width) */}
+      {/* 2. BAGIAN KEDUA: Kartu Status Kesehatan (Berdiri Sendiri / Full Width) */}
+      <motion.div
+        variants={itemVariants}
+        style={{
+          padding: "12px 16px",
+          borderRadius: "12px",
+          backgroundColor: "rgba(15, 23, 42, 0.25)",
+          border: `1px solid ${financialHealth.color}33`,
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          fontSize: "0.825rem",
+          color: "#cbd5e1",
+          width: "100%",
+        }}
+      >
+        <span
+          style={{
+            color: financialHealth.color,
+            display: "flex",
+            alignItems: "center",
+            flexShrink: 0,
+          }}
+        >
+          <HealthIcon size={16} />
+        </span>
+        <span style={{ color: "#94a3b8" }}>
+          Kesehatan:{" "}
+          <strong style={{ color: financialHealth.color }}>
+            {financialHealth.label}
+          </strong>{" "}
+          ({financialHealth.score}/100)
+        </span>
+      </motion.div>
+
+      {/* 3. BAGIAN KETIGA: Kartu Total Saldo */}
       <motion.div
         variants={itemVariants}
         style={{
@@ -172,19 +184,17 @@ export default function MetricCards({
             fontWeight: 700,
             margin: 0,
             letterSpacing: "-0.02em",
-            wordBreak: "break-word",
           }}
         >
           {formatRupiah(balance)}
         </h2>
       </motion.div>
 
-      {/* 3. BAGIAN BAWAH: Grid Pemasukan & Pengeluaran (Responsif otomatis jadi 1 kolom di HP jika diperlukan) */}
+      {/* 4. BAGIAN KEEMPAT: Grid Pemasukan & Pengeluaran */}
       <div
-        className="income-expense-grid"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gridTemplateColumns: "repeat(2, 1fr)",
           gap: "1rem",
         }}
       >
@@ -226,7 +236,6 @@ export default function MetricCards({
               fontWeight: 600,
               margin: 0,
               letterSpacing: "-0.02em",
-              wordBreak: "break-word",
             }}
           >
             {formatRupiah(income)}
@@ -271,7 +280,6 @@ export default function MetricCards({
               fontWeight: 600,
               margin: 0,
               letterSpacing: "-0.02em",
-              wordBreak: "break-word",
             }}
           >
             {formatRupiah(expense)}

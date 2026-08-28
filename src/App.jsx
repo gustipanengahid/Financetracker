@@ -9,8 +9,7 @@ import {
   EyeOff,
   RotateCcw,
   Plus,
-  Download,
-  Upload,
+  DownloadCloud, // Menggunakan icon Database untuk menu backup/restore terpadu
 } from "lucide-react";
 import {
   AreaChart,
@@ -42,6 +41,7 @@ export default function App() {
 
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
+  const [isBackupMenuOpen, setIsBackupMenuOpen] = useState(false); // State untuk dropdown menu backup
 
   const [inputName, setInputName] = useState("");
   const [inputAmount, setInputAmount] = useState("");
@@ -53,6 +53,21 @@ export default function App() {
 
   // Referensi untuk tombol upload file JSON tersembunyi
   const fileInputRef = useRef(null);
+  const backupMenuRef = useRef(null);
+
+  // Efek untuk menutup dropdown jika klik di luar area menu
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        backupMenuRef.current &&
+        !backupMenuRef.current.contains(event.target)
+      ) {
+        setIsBackupMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("finance_transactions", JSON.stringify(transactions));
@@ -147,7 +162,7 @@ export default function App() {
     }
   };
 
-  // Fitu Backup (Ekspor JSON)
+  // Fitur Backup (Ekspor JSON)
   const handleExportData = () => {
     try {
       const backupData = {
@@ -167,6 +182,7 @@ export default function App() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+      setIsBackupMenuOpen(false);
     } catch (error) {
       console.error("Gagal mengekspor data:", error);
       alert("Terjadi kesalahan saat mencadangkan data.");
@@ -207,6 +223,7 @@ export default function App() {
       }
       // Reset input file agar bisa pilih file yang sama jika diperlukan
       e.target.value = "";
+      setIsBackupMenuOpen(false);
     };
     reader.readAsText(file);
   };
@@ -281,53 +298,6 @@ export default function App() {
               {isBalanceHidden ? <EyeOff size={13} /> : <Eye size={13} />}
             </button>
 
-            {/* Tombol Backup (Ekspor JSON) */}
-            <button
-              onClick={handleExportData}
-              className="more-btn"
-              title="Backup Data"
-              style={{
-                padding: "5px 8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "6px",
-                background: "rgba(30, 41, 59, 0.5)",
-                border: "1px solid rgba(255, 255, 255, 0.05)",
-                color: "#94a3b8",
-                cursor: "pointer",
-              }}
-            >
-              <Upload size={13} />
-            </button>
-
-            {/* Tombol Restore (Impor JSON) */}
-            <button
-              onClick={() => fileInputRef.current.click()}
-              className="more-btn"
-              title="Restore Data"
-              style={{
-                padding: "5px 8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "6px",
-                background: "rgba(30, 41, 59, 0.5)",
-                border: "1px solid rgba(255, 255, 255, 0.05)",
-                color: "#94a3b8",
-                cursor: "pointer",
-              }}
-            >
-              <Download size={13} />
-            </button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImportData}
-              accept=".json"
-              style={{ display: "none" }}
-            />
-
             {/* Tombol Reset Data */}
             <button
               onClick={handleResetData}
@@ -347,6 +317,114 @@ export default function App() {
             >
               <RotateCcw size={13} />
             </button>
+
+            {/* Tombol Terpadu Backup & Restore (Dropdown Menu) */}
+            <div style={{ position: "relative" }} ref={backupMenuRef}>
+              <button
+                onClick={() => setIsBackupMenuOpen(!isBackupMenuOpen)}
+                className="more-btn"
+                title="Backup & Restore Data"
+                style={{
+                  padding: "5px 8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "6px",
+                  background: isBackupMenuOpen
+                    ? "rgba(56, 189, 248, 0.15)"
+                    : "rgba(30, 41, 59, 0.5)",
+                  border: "1px solid rgba(255, 255, 255, 0.05)",
+                  color: isBackupMenuOpen ? "#38bdf8" : "#94a3b8",
+                  cursor: "pointer",
+                }}
+              >
+                <DownloadCloud size={13} />
+              </button>
+
+              {/* Menu Dropdown Pilihan Backup / Restore */}
+              <AnimatePresence>
+                {isBackupMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    style={{
+                      position: "absolute",
+                      right: 0,
+                      marginTop: "6px",
+                      width: "150px",
+                      backgroundColor: "#1e293b",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      borderRadius: "8px",
+                      boxShadow: "0 10px 25px -5px rgba(0, 0.05, 0.05, 0.5)",
+                      zIndex: 1100,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <button
+                      onClick={handleExportData}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        textAlign: "left",
+                        background: "transparent",
+                        border: "none",
+                        color: "#e2e8f0",
+                        fontSize: "0.75krem",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background =
+                          "rgba(56, 189, 248, 0.1)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = "transparent")
+                      }
+                    >
+                      Backup Data
+                    </button>
+                    <button
+                      onClick={() => fileInputRef.current.click()}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        textAlign: "left",
+                        background: "transparent",
+                        border: "none",
+                        color: "#e2e8f0",
+                        fontSize: "0.75rem",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background =
+                          "rgba(56, 189, 248, 0.1)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = "transparent")
+                      }
+                    >
+                      Restore Data
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImportData}
+              accept=".json"
+              style={{ display: "none" }}
+            />
 
             {/* Tombol Tambah Transaksi */}
             <button
